@@ -7,6 +7,7 @@ from gemini_instruments.common import build_group_id
 class AstroDataGhost(AstroDataGemini):
 
     __keyword_dict = dict(array_section = 'CCDSEC',
+                          overscan_section = 'BIASSEC',
                           res_mode = 'SMPNAME',
                           )
 
