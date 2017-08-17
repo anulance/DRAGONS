@@ -230,7 +230,7 @@ class CalibDB(PrimitivesBASE):
                                     primname=self.myself(), keyword="PROCDARK")
         self.storeCalibration(adinputs, caltype=caltype)
         return adinputs
-    
+
     def storeProcessedFlat(self, adinputs=None, **params):
         caltype = 'processed_flat'
         sfx = params["suffix"]
@@ -238,7 +238,7 @@ class CalibDB(PrimitivesBASE):
         adinputs = self.markAsCalibration(adinputs, suffix=sfx,
                                     primname=self.myself(), keyword="PROCFLAT")
         self.storeCalibration(adinputs, caltype=caltype)
-        return adinputs       
+        return adinputs
     
     def storeProcessedFringe(self, adinputs=None, **params):
         caltype = 'processed_fringe'
