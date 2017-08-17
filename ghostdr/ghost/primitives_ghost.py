@@ -19,6 +19,7 @@ from gempy.gemini import gemini_tools as gt
 
 from .polyfit import GhostArm, Extractor, SlitView
 
+from geminidr.core import CCD
 from geminidr.gemini.primitives_gemini import Gemini
 from .primitives_calibdb_ghost import CalibDBGHOST
 
@@ -29,7 +30,7 @@ from .lookups import timestamp_keywords as ghost_stamps, polyfit_dict, line_list
 from recipe_system.utils.decorators import parameter_override
 # ------------------------------------------------------------------------------
 @parameter_override
-class GHOST(CalibDBGHOST, Gemini):
+class GHOST(Gemini, CCD, CalibDBGHOST):
     """
     This is the class containing all of the calibration bookkeeping primitives
     for the GHOST level of the type hierarchy tree. It inherits all
@@ -914,8 +915,10 @@ class GHOST(CalibDBGHOST, Gemini):
         adoutputs = []
         for ad in adinputs:
             if 'SLITV' in ad.tags:
-                pass
+                # Putting this here for now
+                ad.hdr['DATASEC'] = '[1:{},1:{}]'.format(*ad[0].data.shape[::-1])
 
+        adoutputs = adinputs
         return adoutputs
 
     def tileAmplifiers(self, adinputs=None, **params):
