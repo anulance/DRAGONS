@@ -12,5 +12,6 @@ timestamp_keys = {
     "fitWavelength": "FITWAVLN",
     "flatCorrect": "FLATCORR",
     "processSlits": "PROCSLIT",
+    "stackSlitFrames": "STCKSLIT",
     "tileAmplifiers": "TILEAMPS",
     }

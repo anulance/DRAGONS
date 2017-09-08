@@ -888,38 +888,52 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                                               strip=True)
         return adinputs
 
-    def stackFrames(self, adinputs=None, **params):
-        pass
-
-    def standardizeStructure(self, adinputs=None, **params):
+    def stackSlitFrames(self, adinputs=None, **params):
         """
-        This primitive is responsible for massaging the structure of passed in
-        data to be compatible with all downstream GHOST primitives.
-        
-        Slit-viewer frames have their extensions promoted to full AD instances,
-        with homogenized extension names/numbers and new unique ORIGNAMEs so
-        stackFrames will operate properly (because it is iraf-based,
-        stackFrames must first write its inputs to disk, and it uses a
-        variation of ORIGNAME to do so).
-        
-        Non-slit-viewer frames are untouched, other than the obligatory
-        adding of a timestamp keyword to indicate that the file has been
-        processed by this primitive.
+        Combines all the extensions in a slit-viewer frame into a single-
+        extension AD instance.
         """
-        #TODO: Shouldn't be necessary once we get python stacking going!
-
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
         adoutputs = []
         for ad in adinputs:
-            if 'SLITV' in ad.tags:
-                # Putting this here for now
-                ad.hdr['DATASEC'] = '[1:{},1:{}]'.format(*ad[0].data.shape[::-1])
+            if 'SLITV' not in ad.tags:
+                log.warning("{} is not a slit-viewer image. Continuing.".
+                            format(ad.filename))
+                adoutputs.append(ad)
+                continue
 
-        adoutputs = adinputs
+            # DQ plane is still needed so call stackFrames for ease
+            # CJS: This is ugly but should go with pythonic stacking
+            extinputs = []
+            for index, ext in enumerate(ad, start=1):
+                adext = deepcopy(ext)
+                filename = gt.filename_updater(ad, suffix='{:04d}'.format(index))
+                adext.filename = filename
+                adext.phu['ORIGNAME'] = filename
+                extinputs.append(adext)
+            adout = self.stackFrames(extinputs, combine_type='average',
+                                     reject_method='none')[0]
+            gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
+            adoutputs.append(adout)
         return adoutputs
+
+    def standardizeStructure(self, adinputs=None, **params):
+        """
+        CJS: Only exists now to add DATASEC keyword to SLITV frames.
+        No longer promotes extensions of SLITV images to full AD instances
+        since stacking can be done in memory.
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        for ad in adinputs:
+            if 'SLITV' in ad.tags:
+                ad.hdr['DATASEC'] = '[1:{},1:{}]'.format(*ad[0].data.shape[::-1])
+        return adinputs
 
     def tileAmplifiers(self, adinputs=None, **params):
         """

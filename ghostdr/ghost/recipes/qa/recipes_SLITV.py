@@ -25,7 +25,7 @@ def makeProcessedSlit(p):
     p.processSlits()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='average', reject_method=None)
+    p.stackSlitFrames()
     p.storeProcessedSlit()
     return
 
