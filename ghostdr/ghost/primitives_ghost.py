@@ -46,7 +46,72 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         self.timestamp_keys.update(ghost_stamps.timestamp_keys)
 
     def applyFlatBPM(self, adinputs=None, **params):
-        pass
+        """
+        Find the flat relevant to the file(s) being processed, and merge the
+        flat's BPM into the target file's.
+
+        Parameters
+        ----------
+        suffix: str
+            suffix to be added to output files
+        flat: str/None
+            Name (full path) of the flatfield to use. If None, try:
+        flatstream: str/None
+            Name of the stream containing the flatfield as the first
+            item in the stream. If None, the calibration service is used
+        writeResult: bool
+            Denotes whether or not to write out the result of profile
+            extraction to disk. This is useful for both debugging, and data
+            quality assurance.
+        """
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        # CJS: extractProfile() contains comments explaining what's going on here
+        flat_list = params["flat"]
+        flatstream = params["flatstream"]
+        if flat_list is None:
+            if flatstream is not None:
+                flat_list = self.streams[flatstream][0]
+            else:
+                self.getProcessedFlat(adinputs)
+                flat_list = [self._get_cal(ad, 'processed_flat')
+                            for ad in adinputs]
+
+        for ad, flat in gt.make_lists(adinputs, flat_list, force_ad=True):
+            if flat is None:
+                log.warning("No flat identified/provided for {} - "
+                            "skipping".format(ad.filename))
+                continue
+
+            # CJS: Edited here to require that the science and flat frames'
+            # extensions are the same shape. The original code would no-op
+            # with a warning for each pair that didn't, but I don't see how
+            # this would happen in normal operations. The clip_auxiliary_data()
+            # function in gemini_tools may be an option here.
+            try:
+                gt.check_inputs_match(adinput1=ad, adinput2=flat,
+                                      check_filter=False)
+            except ValueError:
+                log.warning("Input mismatch between flat and {} - "
+                            "skipping".format(ad.filename))
+                continue
+
+            for ext, flat_ext in zip(ad, flat):
+                if ext.mask is None:
+                    ext.mask = flat_ext.mask
+                else:
+                    ext.mask |= flat_ext.mask
+
+            # Timestamp and update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
+                                              strip=True)
+            if params["write_result"]:
+                ad.write()
+
+        return adinputs
 
     def clipSigmaBPM(self, adinputs=None, **params):
         """
