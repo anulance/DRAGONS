@@ -22,7 +22,7 @@ def makeProcessedArc(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.overscanCorrect()
-    p.tileAmplifiers()
+    p.tileArrays()
     p.biasCorrect()
     p.addVAR(poisson_noise=True)
     # TODO? p.ADUToElectrons()

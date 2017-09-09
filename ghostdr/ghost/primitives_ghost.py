@@ -11,11 +11,11 @@ import functools
 from datetime import datetime, timedelta
 
 import astrodata
-from ghost_instruments import ghost
 
 from geminidr.gemini.lookups import DQ_definitions as DQ
 
 from gempy.gemini import gemini_tools as gt
+from gempy.mosaic.mosaicAD import MosaicAD
 
 from .polyfit import GhostArm, Extractor, SlitView
 
@@ -557,7 +557,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
     def processSlits(self, adinputs=None, **params):
         """
-        This primitive computes the mean exposure epoch.
+        This primitive computes the mean exposure epoch for an input SLITV
+        image (time series of slit-viewer images) and writes it into the PHU
 
         Parameters
         ----------
@@ -577,14 +578,6 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
                          for ad in adinputs]
-            # Put this in for now
-            if len(set(flat_list)) > 1:
-                raise IOError("Input images do not all have the same slitflat"
-                              " calibration.")
-
-        # accumulators for computing the mean epoch
-        sum_of_weights = 0.0
-        accum_weighted_time = 0.0
 
         for ad, slitflat in zip(*gt.make_lists(adinputs, flat_list,
                                                force_ad=True)):
@@ -592,6 +585,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 log.warning("No changes will be made to {}, since it has "
                             "already been processed by processSlits".
                             format(ad.filename))
+                continue
 
             if slitflat is None:
                 log.warning("Unable to find slitflat calibration for {}; "
@@ -600,60 +594,62 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             else:
                 sv_flat = slitflat[0].data
 
+            # accumulators for computing the mean epoch
+            sum_of_weights = 0.0
+            accum_weighted_time = 0.0
+
             # Check the inputs have matching binning and SCI shapes.
             gt.check_inputs_match(ad1=ad, ad2=slitflat, check_filter=False)
 
-            # get science and slit view image start/end times
+            # get science start/end times
             sc_start = datetime.strptime(ad.phu['UTSTART'], "%H:%M:%S.%f")
             sc_end = datetime.strptime(ad.phu['UTEND'], "%H:%M:%S.%f")
-            sv_start = datetime.strptime(ad.hdr['EXPUTST'][0], "%H:%M:%S.%f")
-            sv_end = datetime.strptime(ad.hdr['EXPUTEND'][0], "%H:%M:%S.%f")
 
-            # compute overlap percentage and slit view image duration
-            latest_start = max(sc_start, sv_start)
-            earliest_end = min(sc_end, sv_end)
-            overlap = (earliest_end - latest_start).seconds
-            overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
-            sv_duration = ad.hdr['EXPTIME'][0]
-            overlap /= sv_duration  # convert into a percentage
-
-            # compute the offset (the value to be weighted), in seconds,
-            # from the start of the science exposure
-            offset = 42.0  # init value: overridden if overlap, else 0-scaled
-            if sc_start <= sv_start and sv_end <= sc_end:
-                offset = (sv_start - sc_start).seconds + sv_duration / 2.0
-            elif sv_start < sc_start:
-                offset = overlap * sv_duration / 2.0
-            elif sv_end > sc_end:
-                offset = overlap * sv_duration / 2.0
-                offset += (sv_start - sc_start).seconds
-
-            # add flux-weighted offset (plus weight itself) to accumulators
-            addata = ad[0].data
             res = ad.res_mode()
-            flux = _total_obj_flux(res, addata, sv_flat)
-            weight = flux * overlap
-            sum_of_weights += weight
-            accum_weighted_time += weight * offset
+            for ext in ad:
+                sv_start = datetime.strptime(ext.hdr['EXPUTST'], "%H:%M:%S.%f")
+                sv_end = datetime.strptime(ext.hdr['EXPUTEND'], "%H:%M:%S.%f")
 
-            # Timestamp and update filename
-            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
-            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
-                                              strip=True)
+                # compute overlap percentage and slit view image duration
+                latest_start = max(sc_start, sv_start)
+                earliest_end = min(sc_end, sv_end)
+                overlap = (earliest_end - latest_start).seconds
+                overlap = 0.0 if overlap < 0.0 else overlap  # no overlap edge case
+                sv_duration = ext.hdr['EXPTIME']
+                overlap /= sv_duration  # convert into a percentage
 
-        # final mean exposure epoch computation
-        if sum_of_weights > 0.0:
-            mean_offset = accum_weighted_time / sum_of_weights
-            mean_offset = timedelta(seconds=mean_offset)
-            # write the mean exposure epoch into the headers of all inputs
-            # (UTSTART is identical across all inputs, so AVGEPOCH should be
-            # identical too)
-            for ad in adinputs:
+                # compute the offset (the value to be weighted), in seconds,
+                # from the start of the science exposure
+                offset = 42.0  # init value: overridden if overlap, else 0-scaled
+                if sc_start <= sv_start and sv_end <= sc_end:
+                    offset = (sv_start - sc_start).seconds + sv_duration / 2.0
+                elif sv_start < sc_start:
+                    offset = overlap * sv_duration / 2.0
+                elif sv_end > sc_end:
+                    offset = overlap * sv_duration / 2.0
+                    offset += (sv_start - sc_start).seconds
+
+                # add flux-weighted offset (plus weight itself) to accumulators
+                flux = _total_obj_flux(res, ext.data, sv_flat)
+                weight = flux * overlap
+                sum_of_weights += weight
+                accum_weighted_time += weight * offset
+
+            # final mean exposure epoch computation
+            if sum_of_weights > 0.0:
+                mean_offset = accum_weighted_time / sum_of_weights
+                mean_offset = timedelta(seconds=mean_offset)
+                # write the mean exposure epoch into the PHU
                 sc_start = datetime.strptime(ad.phu['UTSTART'], "%H:%M:%S.%f")
                 mean_epoch = sc_start + mean_offset
                 ad.phu['AVGEPOCH'] = (  # hope this keyword string is ok
                     mean_epoch.strftime("%H:%M:%S.%f")[:-3],
                     'Mean Exposure Epoch')
+
+            # Timestamp and update filename
+            gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
+            ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
+                                              strip=True)
         return adinputs
 
     def rejectCosmicRays(self, adinputs=None, **params):
@@ -924,7 +920,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         """
         CJS: Only exists now to add DATASEC keyword to SLITV frames.
         No longer promotes extensions of SLITV images to full AD instances
-        since stacking can be done in memory.
+        since stackSlitFrames() handles this.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
@@ -932,28 +928,56 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         for ad in adinputs:
             if 'SLITV' in ad.tags:
-                ad.hdr['DATASEC'] = '[1:{},1:{}]'.format(*ad[0].data.shape[::-1])
+                ad.hdr['DATASEC'] = '[1:{1},1:{0}]'.format(*ad[0].data.shape)
         return adinputs
 
-    def tileAmplifiers(self, adinputs=None, **params):
+    # CJS: Primitive has been renamed for consistency with other instruments
+    def tileArrays(self, adinputs=None, **params):
         """
         This primitive will tile the SCI frames of the input images, along
         with the VAR and DQ frames if they exist.
-
-        Parameters
-        ----------
-        rc['mosaic'] : bool (default: False)
-            tile the images by default, or mosaic them (including
-            transformations) if True
-        rc['dq_planes'] : bool (default: False)
-            transform the DQ image, bit plane by bit plane
-        Yields
-        -------
-        rc : dict
-            The same ReductionContext dictionary, with any necessary
-            alterations.
         """
-        pass
+        def simple_mosaic_function(ad):
+            """
+            This should probably go into MosaicAD as the default function
+            """
+            from gempy.mosaic.mosaicData import MosaicData
+            from gempy.mosaic.mosaicGeometry import MosaicGeometry
+
+            # Calling trim_to_data_section() corrects the WCS if the overscan
+            # regions haven't been trimmed yet
+            ad = gt.trim_to_data_section(ad, keyword_comments=self.keyword_comments)
+
+            md = MosaicData()  # Creates an empty object
+            md.data_list = []  # Not needed
+
+            x_bin = ad.detector_x_bin()
+            y_bin = ad.detector_y_bin()
+            detsecs = [(k[0]//x_bin, k[1]//x_bin, k[2]//y_bin, k[3]//y_bin)
+                       for k in ad.detector_section()]
+            # One output block
+            md.coords = {'amp_mosaic_coord': detsecs,
+                         'amp_block_coord': detsecs}
+            nxout = max(k[1] for k in detsecs)
+            nyout = max(k[3] for k in detsecs)
+            mg = MosaicGeometry({'blocksize': (nxout, nyout),
+                                 'mosaic_grid': (1,1)})
+            return md, mg
+
+        log = self.log
+        log.debug(gt.log_message("primitive", self.myself(), "starting"))
+        timestamp_key = self.timestamp_keys[self.myself()]
+
+        adoutputs = []
+        for ad in adinputs:
+            mo = MosaicAD(ad, mosaic_ad_function=simple_mosaic_function)
+            ad_mos = mo.as_astrodata(tile=True)
+
+            gt.mark_history(ad_mos, primname=self.myself(), keyword=timestamp_key)
+            ad_mos.filename = gt.filename_updater(ad_mos, suffix=params["suffix"],
+                                              strip=True)
+            adoutputs.append(ad_mos)
+        return adoutputs
 
     # validateData() removed since inherited Standardize method will handle it
 
