@@ -23,7 +23,7 @@ def makeProcessedDark(p):
     p.overscanCorrect()
     p.tileArrays()
     p.biasCorrect()
-    p.ADUToElection()
+    p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.stackFrames(reject_method='ccdclip', mclip=True, snoise=0.02, lsigma=7., hsigma=7.)
     p.storeProcessedDark()

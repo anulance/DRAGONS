@@ -23,7 +23,7 @@ def makeProcessedDark(p):
     p.overscanCorrect()
     p.tileArrays()
     p.biasCorrect()
-    p.ADUToElection()
+    p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
