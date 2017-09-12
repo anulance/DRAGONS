@@ -25,7 +25,7 @@ def makeProcessedSlitArc(p):
     # TODO? p.ADUToElectrons()
     p.darkCorrect()
     #p.correctSlitCosmics()
-    p.stackFrames(operation='median', reject_method=None)
+    p.stackSlitFrames(operation='median', reject_method=None)
     p.storeProcessedArc()
     return
 

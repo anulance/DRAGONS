@@ -22,7 +22,7 @@ def makeProcessedSlitBias(p):
     p.addVAR(read_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median', reject_method=None)
+    p.stackSlitFrames(operation='median', reject_method=None)
     p.storeProcessedSlitBias()
     return
 

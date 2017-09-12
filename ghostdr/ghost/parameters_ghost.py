@@ -52,6 +52,10 @@ class ParametersGHOST(ParametersGemini, ParametersCCD, ParametersCalibDBGHOST):
         "f_lim"             : 5.0,
         "n_steps"           : 1,
     }
+    stackSlitFrames = {
+        "operation"         : "average",
+        "reject_method"     : "none",
+    }
     tileAmplifiers = {
         "suffix"            : "_ampsTiled",
     }

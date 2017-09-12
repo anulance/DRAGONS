@@ -27,7 +27,7 @@ def makeProcessedSlitArc(p):
     #p.correctSlitCosmics()
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
-    p.stackFrames(operation='median', reject_method=None)
+    p.stackSlitFrames(operation='median', reject_method=None)
     p.storeProcessedArc()
     return
 

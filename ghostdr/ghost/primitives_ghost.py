@@ -951,34 +951,50 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
     def stackSlitFrames(self, adinputs=None, **params):
         """
-        Combines all the extensions in a slit-viewer frame into a single-
+        Combines all the extensions in a slit-viewer frame(s) into a single-
         extension AD instance.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
+        operation = params["operation"]
+        reject_method = params["reject_method"]
+
+        # Keep hold of the first SLITV input's filename so the stacked
+        # output has a sensible name.
+        first_filename = None
+
+        # CJS: This could be rewritten to produce one output AD for each
+        # input AD by combining the extensions from each input separately.
+        # That behaviour would not need the addToList/getList primitives.
+        # But this is a better match to how the original code behaved.
         adoutputs = []
+        extinputs = []
         for ad in adinputs:
+            # CJS: Worth doing this check, I feel
             if 'SLITV' not in ad.tags:
                 log.warning("{} is not a slit-viewer image. Continuing.".
                             format(ad.filename))
                 adoutputs.append(ad)
                 continue
 
+            if not first_filename:
+                first_filename = ad.phu['ORIGNAME'] or ad.filename
             # DQ plane is still needed so call stackFrames for ease
             # CJS: This is ugly but should go with pythonic stacking
-            extinputs = []
             for index, ext in enumerate(ad, start=1):
                 adext = deepcopy(ext)
                 filename = gt.filename_updater(ad, suffix='{:04d}'.format(index))
                 adext.filename = filename
                 adext.phu['ORIGNAME'] = filename
                 extinputs.append(adext)
-            adout = self.stackFrames(extinputs, combine_type='average',
-                                     reject_method='none')[0]
-            gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
-            adoutputs.append(adout)
+        adout = self.stackFrames(extinputs, operation=operation,
+                                 reject_method=reject_method)[0]
+        if first_filename:
+            adout.phu['ORIGNAME'] = first_filename
+        gt.mark_history(adout, primname=self.myself(), keyword=timestamp_key)
+        adoutputs.append(adout)
         return adoutputs
 
     def standardizeStructure(self, adinputs=None, **params):
