@@ -28,8 +28,8 @@ def makeProcessedDark(p):
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
     p.stackFrames(reject_method='ccdclip', mclip=True, snoise=0.02, lsigma=7., hsigma=7.)
-    p.storeProcessedDark()
     p.clipSigmaBPM()
+    p.storeProcessedDark()
     return
 
 default = makeProcessedDark
