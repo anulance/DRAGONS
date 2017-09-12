@@ -21,7 +21,7 @@ def makeProcessedSlitDark(p):
     p.addDQ()
     p.addVAR(read_noise=True)
     p.biasCorrect()
-    p.ADUToElection()
+    p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
