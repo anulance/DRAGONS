@@ -52,14 +52,12 @@ class AstroDataGhost(AstroDataGemini):
     @astro_data_tag
     def _tag_slitv(self):
         if self.phu.get('CCDNAME', '').startswith('Sony-ICX674'):
-            return TagSet(['SLITV'])
+            return TagSet(['SLITV'], blocks=['SPECT'])
 
     @astro_data_tag
     def _tag_spect(self):
         # Also returns BLUE or RED if the CAMERA keyword is set thus
-        if self.phu.get('CCDNAME', '').startswith('E2V-CCD-231-'):
-            return TagSet(({self.phu.get('CAMERA')} & {'BLUE', 'RED'})
-                          | {'SPECT'})
+        return TagSet(({self.phu.get('CAMERA')} & {'BLUE', 'RED'}) | {'SPECT'})
 
     @astro_data_tag
     def _status_processed_cals(self):
