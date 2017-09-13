@@ -147,7 +147,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                         ext.mask[mask_map] |= bpm_value
 
                     log.stdinfo('   {}:{}: nPixMasked: {:9d} / {:9d}'.format(
-                        ad.filename, extver, np.sum(mask_map, ext.data.size)))
+                        ad.filename, extver, np.sum(mask_map), ext.data.size))
                 else:
                     log.warning('No DQ plane in {}:{}'.format(ad.filename,
                                                               extver))
