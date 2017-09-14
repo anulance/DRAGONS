@@ -26,5 +26,5 @@ class ParametersCalibDBGHOST(ParametersCalibDB):
     }
 
     storeProcessedXmod = {
-        "suffix"            : "_xmodPolyfit"
+        "suffix"            : "_xmodPolyfit",
     }
