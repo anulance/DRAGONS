@@ -6,40 +6,40 @@
 
 xmod_dict = {
     # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'Polyfit/red/std/161120/xmod.fits',
-    'GHOST_1_1_red_high_161120': 'Polyfit/red/high/161120/xmod.fits',
-    'GHOST_1_1_blue_std_161120': 'Polyfit/blue/std/161120/xmod.fits',
-    'GHOST_1_1_blue_high_161120': 'Polyfit/blue/high/161120/xmod.fits',
+    'GHOST_1_1_red_std_161120': 'red/std/161120/xmod.fits',
+    'GHOST_1_1_red_high_161120': 'red/high/161120/xmod.fits',
+    'GHOST_1_1_blue_std_161120': 'blue/std/161120/xmod.fits',
+    'GHOST_1_1_blue_high_161120': 'blue/high/161120/xmod.fits',
 }
 
 wavemod_dict = {
     # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'Polyfit/red/std/161120/wavemod.fits',
-    'GHOST_1_1_red_high_161120': 'Polyfit/red/high/161120/wavemod.fits',
-    'GHOST_1_1_blue_std_161120': 'Polyfit/blue/std/161120/wavemod.fits',
-    'GHOST_1_1_blue_high_161120': 'Polyfit/blue/high/161120/wavemod.fits',
+    'GHOST_1_1_red_std_161120': 'red/std/161120/wavemod.fits',
+    'GHOST_1_1_red_high_161120': 'red/high/161120/wavemod.fits',
+    'GHOST_1_1_blue_std_161120': 'blue/std/161120/wavemod.fits',
+    'GHOST_1_1_blue_high_161120': 'blue/high/161120/wavemod.fits',
 }
 
 spatmod_dict = {
     # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'Polyfit/red/std/161120/spatmod.fits',
-    'GHOST_1_1_red_high_161120': 'Polyfit/red/high/161120/spatmod.fits',
-    'GHOST_1_1_blue_std_161120': 'Polyfit/blue/std/161120/spatmod.fits',
-    'GHOST_1_1_blue_high_161120': 'Polyfit/blue/high/161120/spatmod.fits',
+    'GHOST_1_1_red_std_161120': 'red/std/161120/spatmod.fits',
+    'GHOST_1_1_red_high_161120': 'red/high/161120/spatmod.fits',
+    'GHOST_1_1_blue_std_161120': 'blue/std/161120/spatmod.fits',
+    'GHOST_1_1_blue_high_161120': 'blue/high/161120/spatmod.fits',
 }
 
 specmod_dict = {
     # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'Polyfit/red/std/161120/specmod.fits',
-    'GHOST_1_1_red_high_161120': 'Polyfit/red/high/161120/specmod.fits',
-    'GHOST_1_1_blue_std_161120': 'Polyfit/blue/std/161120/specmod.fits',
-    'GHOST_1_1_blue_high_161120': 'Polyfit/blue/high/161120/specmod.fits',
+    'GHOST_1_1_red_std_161120': 'red/std/161120/specmod.fits',
+    'GHOST_1_1_red_high_161120': 'red/high/161120/specmod.fits',
+    'GHOST_1_1_blue_std_161120': 'blue/std/161120/specmod.fits',
+    'GHOST_1_1_blue_high_161120': 'blue/high/161120/specmod.fits',
 }
 
 rotmod_dict = {
     # 'key': 'relative_dir',
-    'GHOST_1_1_red_std_161120': 'Polyfit/red/std/161120/rotmod.fits',
-    'GHOST_1_1_red_high_161120': 'Polyfit/red/high/161120/rotmod.fits',
-    'GHOST_1_1_blue_std_161120': 'Polyfit/blue/std/161120/rotmod.fits',
-    'GHOST_1_1_blue_high_161120': 'Polyfit/blue/high/161120/rotmod.fits',
+    'GHOST_1_1_red_std_161120': 'red/std/161120/rotmod.fits',
+    'GHOST_1_1_red_high_161120': 'red/high/161120/rotmod.fits',
+    'GHOST_1_1_blue_std_161120': 'blue/std/161120/rotmod.fits',
+    'GHOST_1_1_blue_high_161120': 'blue/high/161120/rotmod.fits',
 }
