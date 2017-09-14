@@ -13,7 +13,6 @@ def makeProcessedSlit(p):
     p : Primitives object
         A primitive set matching the recipe_tags.
     """
-
     p.prepare()
     p.addDQ()
     p.addVAR(read_noise=True)
@@ -23,8 +22,9 @@ def makeProcessedSlit(p):
     p.darkCorrect()
     #p.correctSlitCosmics()
     p.processSlits()
-    p.addToList(purpose="forStack")
-    p.getList(purpose="forStack")
+    # CJS: Commented out due to inability to separate 0.5 and 1.0 slits
+    #p.addToList(purpose="forStack")
+    #p.getList(purpose="forStack")
     p.stackSlitFrames()
     p.storeProcessedSlit()
     return
