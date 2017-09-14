@@ -26,7 +26,7 @@ def makeProcessedSlitDark(p):
     p.addToList(purpose="forStack")
     p.getList(purpose="forStack")
     p.stackSlitFrames(operation='median', reject_method=None)
-    p.storeProcessedSlitDark()
+    p.storeProcessedDark()
     return
 
 default = makeProcessedSlitDark

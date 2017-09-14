@@ -24,7 +24,7 @@ def makeProcessedSlitDark(p):
     p.ADUToElectrons()
     p.addVAR(poisson_noise=True)
     p.stackSlitFrames(operation='median', reject_method=None)
-    p.storeProcessedSlitDark()
+    p.storeProcessedDark()
     return
 
 default = makeProcessedSlitDark
