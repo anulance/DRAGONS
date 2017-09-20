@@ -109,9 +109,15 @@ class AstroDataGhost(AstroDataGemini):
             desc_list = []
         else:  # science exposures (and ARCs)
             desc_list = ['observation_id', 'res_mode']
-
         desc_list.append('arm')
-        return build_group_id(self, desc_list, prettify=[], additional=None)
+
+        # CJS: Generally need to stop FLATs being stacked with science
+        additional_item = 'FLAT' if 'FLAT' in tags else None
+
+        # CJS: Probably needs something to do with the slit width too!
+
+        return build_group_id(self, desc_list, prettify=[],
+                              additional=additional_item)
 
     @astro_data_descriptor
     def res_mode(self):
