@@ -41,8 +41,17 @@ class ParametersGHOST(ParametersGemini, ParametersCCD, ParametersCalibDBGHOST):
         "slitflat"          : None,
         "write_result"      : True,
     }
+    overscanCorrect = {
+        "suffix"            : "_overscanCorrected",
+        "niterate"          : 2,
+        "high_reject"       : 3.0,
+        "low_reject"        : 3.0,
+        "function"          : "polynomial",
+        "nbiascontam"       : 4,
+        "order"             : 0,
+    }
     processSlits = {
-        "slitflat"              : None,
+        "flat"              : None,
         "suffix"            : "_slitsProcessed",
     }
     rejectCosmicRays = {

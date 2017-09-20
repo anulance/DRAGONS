@@ -31,19 +31,19 @@ class CalibDBGHOST(CalibDB):
         return adinputs
 
     def getProcessedSlitBias(self, adinputs=None, **params):
-        caltype = "processed_slitBias"
+        caltype = "processed_slitbias"
         self.getCalibration(adinputs, caltype=caltype)
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
     def getProcessedSlitDark(self, adinputs=None, **params):
-        caltype = "processed_slitDark"
+        caltype = "processed_slitdark"
         self.getCalibration(adinputs, caltype=caltype)
         self._assert_calibrations(adinputs, caltype)
         return adinputs
 
     def getProcessedSlitFlat(self, adinputs=None, **params):
-        caltype = "processed_slitFlat"
+        caltype = "processed_slitflat"
         self.getCalibration(adinputs, caltype=caltype)
         self._assert_calibrations(adinputs, caltype)
         return adinputs
@@ -71,7 +71,7 @@ class CalibDBGHOST(CalibDB):
         return adinputs
 
     def storeProcessedSlitBias(self, adinputs=None, **params):
-        caltype = 'processed_slitBias'
+        caltype = 'processed_slitbias'
         sfx = params["suffix"]
         self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
         adinputs = self.markAsCalibration(adinputs, suffix=sfx,
@@ -80,7 +80,7 @@ class CalibDBGHOST(CalibDB):
         return adinputs
 
     def storeProcessedSlitDark(self, adinputs=None, **params):
-        caltype = 'processed_slitDark'
+        caltype = 'processed_slitdark'
         sfx = params["suffix"]
         self.log.debug(gt.log_message("primitive", self.myself(), "starting"))
         adinputs = self.markAsCalibration(adinputs, suffix=sfx,

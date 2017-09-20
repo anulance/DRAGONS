@@ -70,16 +70,16 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         # CJS: extractProfile() contains comments explaining what's going on here
         flat_list = params["flat"]
-        flatstream = params["flatstream"]
+        flat_stream = params["flat_stream"]
         if flat_list is None:
-            if flatstream is not None:
-                flat_list = self.streams[flatstream][0]
+            if flat_stream is not None:
+                flat_list = self.streams[flat_stream][0]
             else:
                 self.getProcessedFlat(adinputs)
                 flat_list = [self._get_cal(ad, 'processed_flat')
                             for ad in adinputs]
 
-        for ad, flat in gt.make_lists(adinputs, flat_list, force_ad=True):
+        for ad, flat in zip(*gt.make_lists(adinputs, flat_list, force_ad=True)):
             if flat is None:
                 log.warning("No flat identified/provided for {} - "
                             "skipping".format(ad.filename))
@@ -109,7 +109,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
                                               strip=True)
             if params["write_result"]:
-                ad.write()
+                ad.write(clobber=True)
 
         return adinputs
 
@@ -173,13 +173,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         timestamp_key = self.timestamp_keys[self.myself()]
 
         # Check that all SLITV inputs are single-extension images
-        if any([('SLITV' in ad.tags and len(ad)!=1) for ad in adinputs]):
-            raise IOError("All input SLITV images must have a single extension")
-
-        # Make the median slit frame.
-        ext_stack = np.array([ad[0].data for ad in adinputs])
-        sv_med = np.median(ext_stack, axis=0)
-        sigma = self._mad(ext_stack, axis=0)
+        #if any([('SLITV' in ad.tags and len(ad)!=1) for ad in adinputs]):
+        #    raise IOError("All input SLITV images must have a single extension")
 
         for ad in adinputs:
             if ad.phu.get(timestamp_key):
@@ -193,44 +188,51 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                             "a slit viewer frame".format(ad.filename))
                 continue
 
-            addata = ad[0].data
+            # Make the median slit frame.
+            # ext_stack = np.array([ad[0].data for ad in adinputs])
+            ext_stack = np.array([ext.data for ext in ad])
+            sv_med = np.median(ext_stack, axis=0)
+            sigma = _mad(ext_stack, axis=0) * 20
             res = ad.res_mode()
 
-            # pre-CR-corrected flux computation
-            flux_before = _total_obj_flux(res, addata, None)
+            for ext in ad:
+                addata = ext.data
 
-            # replace CR-affected pixels with those from the median slit
-            # viewer image (subtract the median slit frame and threshold
-            # against the residuals); not sure VAR/DQ planes appropriately
-            # handled here
-            residuals = abs(addata - sv_med)
-            indices = residuals > sigma
-            addata[indices] = sv_med[indices]
+                # pre-CR-corrected flux computation
+                flux_before = _total_obj_flux(res, addata, None)
 
-            # post-CR-corrected flux computation
-            flux_after = _total_obj_flux(res, addata, None)
+                # replace CR-affected pixels with those from the median slit
+                # viewer image (subtract the median slit frame and threshold
+                # against the residuals); not sure VAR/DQ planes appropriately
+                # handled here
+                residuals = abs(addata - sv_med)
+                indices = residuals > sigma
+                addata[indices] = sv_med[indices]
 
-            # CJS: since addata is a reference, the CR fix changes the data
-            # in place and there's no need to reassign ad[0].data = addata
+                # post-CR-corrected flux computation
+                flux_after = _total_obj_flux(res, addata, None)
 
-            # # uncomment to output the residuals for debugging
-            # myresid = deepcopy(ad)
-            # myresid[0].data = residuals
-            # myresid.filename = gt.filename_updater(ad, suffix='_resid')
-            # myresid.write()
+                # CJS: since addata is a reference, the CR fix changes the data
+                # in place and there's no need to reassign ad[0].data = addata
 
-            # # uncomment to output the indices for debugging
-            # myindex = deepcopy(ad)
-            # myindex[0].data = indices.astype(int)
-            # myindex.filename = gt.filename_updater(ad, suffix='_index')
-            # myindex.write()
+                # # uncomment to output the residuals for debugging
+                # myresid = deepcopy(ad)
+                # myresid[0].data = residuals
+                # myresid.filename = gt.filename_updater(ad, suffix='_resid')
+                # myresid.write()
 
-            # Output and record number of pixels replaced
-            nreplaced = indices.sum()
-            log.stdinfo("   {}: nPixReplaced = {:6d}, flux = {:.1f} -> {:.1f}"
-                        "".format(ad.filename, nreplaced, flux_before,
-                                  flux_after))
-            ad.hdr['CRPIXREJ'] = (nreplaced, '# of CR pixels replaced by median')
+                # # uncomment to output the indices for debugging
+                # myindex = deepcopy(ad)
+                # myindex[0].data = indices.astype(int)
+                # myindex.filename = gt.filename_updater(ad, suffix='_index')
+                # myindex.write()
+
+                # Output and record number of pixels replaced
+                nreplaced = indices.sum()
+                log.stdinfo("   {}:{} : nPixReplaced = {:6d}, flux = {:.1f} -> {:.1f}"
+                            "".format(ad.filename, ext.hdr['EXTVER'], nreplaced,
+                                      flux_before, flux_after))
+                ext.hdr['CRPIXREJ'] = (nreplaced, '# of CR pixels replaced by median')
 
             # Timestamp and update filename
             gt.mark_history(ad, primname=self.myself(), keyword=timestamp_key)
@@ -274,7 +276,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         slit_list = params["slit"]
         if slit_list is None:
             # CJS: This populates the calibrations cache (dictionary) with
-            # "processed_list" filenames for each input AD
+            # "processed_slit" filenames for each input AD
             self.getProcessedSlit(adinputs)
             # This then gets those filenames
             slit_list = [self._get_cal(ad, 'processed_slit')
@@ -320,17 +322,21 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
             res_mode = ad.res_mode()
             arm = GhostArm(arm=ad.arm(), mode=res_mode)
-            key = self._get_polyfit_key(ad)
-            log.stdinfo("Polyfit key selected: {}".format(key))
 
             # CJS: Heavy refactor. Return the filename for each calibration
             # type. Eliminates requirement that everything be updated
             # simultaneously.
+            #key = self._get_polyfit_key(ad)
+            #log.stdinfo("Polyfit key selected: {}".format(key))
             try:
-                wpars = astrodata.open(self._get_polyfit_filename(ad, 'wavemod'))
-                spatpars = astrodata.open(self._get_polyfit_filename(ad, 'spatmod'))
-                specpars = astrodata.open(self._get_polyfit_filename(ad, 'specmod'))
-                rotpars = astrodata.open(self._get_polyfit_filename(ad, 'rotmod'))
+                poly_wave = self._get_polyfit_filename(ad, 'wavemod')
+                poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                poly_spec = self._get_polyfit_filename(ad, 'specmod')
+                poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                wpars = astrodata.open(poly_wave)
+                spatpars = astrodata.open(poly_spat)
+                specpars = astrodata.open(poly_spec)
+                rotpars = astrodata.open(poly_rot)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -358,7 +364,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             ad.filename = gt.filename_updater(ad, suffix=params["suffix"],
                                               strip=True)
             if params["write_result"]:
-                ad.write()
+                ad.write(clobber=True)
 
         return adinputs
 
@@ -391,8 +397,10 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 continue
 
             try:
-                xpars = astrodata.open(self._get_polyfit_filename(ad, 'xmod'))
-                spatpars = astrodata.open(self._get_polyfit_filename(ad, 'spatmod'))
+                poly_xmod = self._get_polyfit_filename(ad, 'xmod')
+                poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                xpars = astrodata.open(poly_xmod)
+                spatpars = astrodata.open(poly_spat)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
@@ -425,6 +433,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             ad_xmod.append(fitted_params)
             # TODO: Check this is the right thing to do
             ad_xmod.filename = ad.filename
+            # Need to add data_label for storeAsCalibration()
+            ad_xmod.phu['DATALAB'] = ad.data_label()
             gt.mark_history(ad_xmod, primname=self.myself(), keyword=timestamp_key)
 
             adoutputs.append(ad_xmod)
@@ -551,7 +561,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
         objflat_list = params["flat"]
         if objflat_list is None:
-            self.getProcessedSlitFlat(adinputs)
+            self.getProcessedFlat(adinputs)
             objflat_list = [self._get_cal(ad, 'processed_flat')
                          for ad in adinputs]
 
@@ -565,7 +575,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         _, xmod_list = gt.make_lists(adinputs, xmod_list, force_ad=True)
 
         for ad, slit, flat, obj_flat, xpars in zip(adinputs, slit_list,
-                                        objflat_list, flat_list, xmod_list):
+                                        flat_list, objflat_list, xmod_list):
             log.info(ad.info())
 
             # CJS: failure to find a suitable auxiliary file (either because
@@ -597,6 +607,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             sview = SlitView(slit[0].data, flat[0].data, mode=res_mode)
 
             extractor = Extractor(arm, sview)
+            print obj_flat.filename, obj_flat[0].data.shape
             extracted_flux, extracted_var = extractor.two_d_extract(
                 obj_flat[0].data, extraction_weights=ad[0].WGT)
             # import pdb; pdb.set_trace()
@@ -612,7 +623,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             flatprof_ad[0].reset(extracted_flux, mask=None,
                                  variance=extracted_var)
             if params["write_result"]:
-                flatprof_ad.write()
+                flatprof_ad.write(clobber=True)
 
             # Divide the flat field through the science data
             # Arithmetic propagates VAR correctly
@@ -637,8 +648,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
         timestamp_key = self.timestamp_keys[self.myself()]
 
-        # CJS: Changed parameter to slitflat from flat, because it is!
-        flat_list = params["slitflat"]
+        flat_list = params["flat"]
         if flat_list is None:
             self.getProcessedSlitFlat(adinputs)
             flat_list = [self._get_cal(ad, 'processed_slitflat')
@@ -664,7 +674,16 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             accum_weighted_time = 0.0
 
             # Check the inputs have matching binning and SCI shapes.
-            gt.check_inputs_match(ad1=ad, ad2=slitflat, check_filter=False)
+            try:
+                gt.check_inputs_match(adinput1=ad, adinput2=slitflat,
+                                      check_filter=False)
+            except ValueError:
+                # This is most likely because the science frame has multiple
+                # extensions and the slitflat needs to be copied
+                slitflat = gt.clip_auxiliary_data(ad, slitflat, aux_type='cal',
+                                    keyword_comments=self.keyword_comments)
+                # An Error will be raised if they don't match now
+                gt.check_inputs_match(ad, slitflat, check_filter=False)
 
             # get science start/end times
             sc_start = datetime.strptime(ad.phu['UTSTART'], "%H:%M:%S.%f")
@@ -989,6 +1008,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 adext.filename = filename
                 adext.phu['ORIGNAME'] = filename
                 extinputs.append(adext)
+
+        # CJS: Could simply pass parameters as **params here
         adout = self.stackFrames(extinputs, operation=operation,
                                  reject_method=reject_method)[0]
         if first_filename:
@@ -999,13 +1020,13 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
     def standardizeStructure(self, adinputs=None, **params):
         """
-        CJS: Only exists now to add DATASEC keyword to SLITV frames.
+        CJS: Only exists now to add DATASEC keyword to SLITV frames, which
+        is missing in the simulated data.
         No longer promotes extensions of SLITV images to full AD instances
         since stackSlitFrames() handles this.
         """
         log = self.log
         log.debug(gt.log_message("primitive", self.myself(), "starting"))
-        timestamp_key = self.timestamp_keys[self.myself()]
 
         for ad in adinputs:
             if 'SLITV' in ad.tags:
@@ -1020,7 +1041,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
         """
         def simple_mosaic_function(ad):
             """
-            This should probably go into MosaicAD as the default function
+            This should probably go into MosaicAD as the default function.
+            Being discussed within the team.
             """
             from gempy.mosaic.mosaicData import MosaicData
             from gempy.mosaic.mosaicGeometry import MosaicGeometry

@@ -10,15 +10,15 @@ class ParametersCalibDBGHOST(ParametersCalibDB):
     }
 
     storeProcessedSlitBias = {
-        "suffix"            : "_slitBias",
+        "suffix"            : "_slitbias",
     }
 
     storeProcessedSlitDark = {
-        "suffix"            : "_slitDark",
+        "suffix"            : "_slitdark",
     }
 
     storeProcessedSlitFlat = {
-        "suffix"            : "_slitFlat",
+        "suffix"            : "_slitflat",
     }
 
     storeProcessedWavefit = {
