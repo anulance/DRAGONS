@@ -60,7 +60,7 @@ class AstroDataGhost(AstroDataGemini):
         return TagSet(({self.phu.get('CAMERA')} & {'BLUE', 'RED'}) | {'SPECT'})
 
     @astro_data_tag
-    def _status_processed_cals(self):
+    def _status_processed_ghost_cals(self):
         kwords = set(['PRSLITIM', 'PRSLITBI', 'PRSLITDA', 'PRSLITFL',
                       'PRWAVLFT', 'PRPOLYFT'])
         if set(self.phu.keywords) & kwords:
