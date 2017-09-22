@@ -348,8 +348,9 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
 
             extractor = Extractor(arm, sview, badpixmask=ad[0].mask,
                                   vararray=ad[0].variance)
-            extracted_flux, extracted_var, extracted_weights = \
-                extractor.one_d_extract(ad[0].data)
+            # CJS: Makes it clearer that you're throwing the first two
+            # returned objects away (get replaced in the two_d_extract call)
+            _, _, extracted_weights = extractor.one_d_extract(ad[0].data)
             extracted_flux, extracted_var = extractor.two_d_extract(ad[0].data,
                                     extraction_weights=extracted_weights)
 
@@ -431,9 +432,8 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # Minimal PrimaryHDU, but AD must recognize as "GHOST"
             ad_xmod = astrodata.create({'INSTRUME': 'GHOST'})
             ad_xmod.append(fitted_params)
-            # TODO: Check this is the right thing to do
             ad_xmod.filename = ad.filename
-            # Need to add data_label for storeAsCalibration()
+            # CJS: Need to add data_label for storeAsCalibration()
             ad_xmod.phu['DATALAB'] = ad.data_label()
             gt.mark_history(ad_xmod, primname=self.myself(), keyword=timestamp_key)
 
@@ -469,17 +469,22 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                 continue
 
             try:
-                wpars = astrodata.open(self._get_polyfit_filename(ad, 'wavemod'))
-                spatpars = astrodata.open(self._get_polyfit_filename(ad, 'spatmod'))
-                specpars = astrodata.open(self._get_polyfit_filename(ad, 'specmod'))
-                rotpars = astrodata.open(self._get_polyfit_filename(ad, 'rotmod'))
+                poly_wave = self._get_polyfit_filename(ad, 'wavemod')
+                poly_spat = self._get_polyfit_filename(ad, 'spatmod')
+                poly_spec = self._get_polyfit_filename(ad, 'specmod')
+                poly_rot = self._get_polyfit_filename(ad, 'rotmod')
+                wpars = astrodata.open(poly_wave)
+                spatpars = astrodata.open(poly_spat)
+                specpars = astrodata.open(poly_spec)
+                rotpars = astrodata.open(poly_rot)
             except IOError:
                 log.warning("Cannot open required initial model files for {};"
                             " skipping".format(ad.filename))
                 continue
 
             # CJS: line_list location is now in lookups/__init__.py
-            arclinefile = os.path.join(os.path.dirname(polyfit_dict), line_list)
+            arclinefile = os.path.join(os.path.dirname(polyfit_dict.__file__),
+                                       line_list)
             arcwaves, arcfluxes = np.loadtxt(arclinefile, usecols=[1, 2]).T
 
             arm = GhostArm(arm=ad.arm(), mode=ad.res_mode())
@@ -490,9 +495,7 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
                                             rotpars[0].data)
 
             extractor = Extractor(arm, None)  # slitview=None for this usage
-            lines_out = extractor.find_lines(ad['SCI'].data,
-                                             arcwaves,
-                                             inspect=False)
+            lines_out = extractor.find_lines(ad[0].data, arcwaves, inspect=False)
 
             #import pdb; pdb.set_trace()
             fitted_params, wave_and_resid = arm.read_lines_and_fit(
@@ -501,13 +504,15 @@ class GHOST(Gemini, CCD, CalibDBGHOST):
             # Much like the solution for findApertures, create a minimum-spec
             # AstroData object to prepare the result for storage in the
             # calibrations system
-            ad_xmod = astrodata.create({'INSTRUME': 'GHOST'})
-            ad_xmod.append(fitted_params)
-            # TODO: Check this is the right thing to do
-            ad_xmod.filename = ad.filename
-            gt.mark_history(ad_xmod, primname=self.myself(), keyword=timestamp_key)
+            # CJS: Renamed to ad_wfit from ad_xmod
+            ad_wfit = astrodata.create({'INSTRUME': 'GHOST'})
+            ad_wfit.append(fitted_params)
+            ad_wfit.filename = ad.filename
+            # CJS: Need to add data_label for storeAsCalibration()
+            ad_wfit.phu['DATALAB'] = ad.data_label()
+            gt.mark_history(ad_wfit, primname=self.myself(), keyword=timestamp_key)
 
-            adoutputs.append(ad_xmod)
+            adoutputs.append(ad_wfit)
         return adoutputs
 
     def flatCorrect(self, adinputs=None, **params):
